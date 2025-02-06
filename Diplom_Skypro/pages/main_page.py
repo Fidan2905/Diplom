@@ -1,96 +1,110 @@
-import allure
-from time import sleep
-from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium import webdriver
-from settings import *
-
+from selenium.webdriver.remote.webdriver import WebDriver
+from typing import Optional
 
 class MainPage:
-    def __init__(self, browser):
-        self.browser = browser
 
-    def _take_screenshot(self, name):
-        """Делает скриншот и прикрепляет его к отчету Allure."""
-        allure.attach(
-            self.browser.get_screenshot_as_png(),
-            name=name,
-            attachment_type=allure.attachment_type.PNG
+    # Селекторы
+    ORIGIN_INPUT = (By.ID, "avia_form_origin-input")
+    DESTINATION_INPUT = (By.ID, "avia_form_destination-input")
+    DEPARTURE_CALENDAR_ICON = (By.CSS_SELECTOR, '[data-test-id="departure-calendar-icon"]')
+    DATE_SELECTOR = (By.CSS_SELECTOR, '[data-test-id="date-{}"]')
+    PASSENGERS_FIELD = (By.CSS_SELECTOR, '[data-test-id="passengers-field"]')
+    INCREASE_BUTTON = (By.CSS_SELECTOR, '[data-test-id="increase-button"]')
+    TRIP_CLASS_F = (By.CSS_SELECTOR, '[data-test-id="trip-class-F"]')
+    TRIP_CLASS_W = (By.CSS_SELECTOR, '[data-test-id="trip-class-W"]')
+    FORM_SUBMIT = (By.CSS_SELECTOR, '[data-test-id="form-submit"]')
+    PASSENGERS_QUANTITY = (By.XPATH, "(//div[@aria-label='passengers'])[1]")
+    TRIP_CLASS = (By.XPATH, "(//div[@data-test-id='trip-class'])[1]")
+
+    def __init__(self, driver: WebDriver):
+        self.driver = driver
+        self.driver.get("https://www.aviasales.ru/")
+        self.driver.maximize_window()
+
+    def fill_origin(self, origin: str) -> None:
+        """Заполнение поля Откуда"""
+        element_origin = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.ORIGIN_INPUT)
         )
+        element_origin.clear()
+        element_origin.send_keys(origin)
 
-    @allure.step("Открыть страницу {url}")
-    def open_page(self, url):
-        self.browser.get(url)
-        self._take_screenshot("Страница открыта")
-
-    @allure.step("Ввести город отправления")
-    def enter_origin_city(self, city):
-        origin_input = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@data-test-id="origin-input"]'))
+    def fill_destination(self, destination: str) -> None:
+        """Заполнение поля Куда"""
+        element_destination = WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.DESTINATION_INPUT)
         )
-        origin_input.clear()
-        origin_input.send_keys(city, Keys.RETURN)
-        sleep(2)
-        self._take_screenshot(f"Введен город отправления: {city}")
-        assert origin_input.get_attribute("value") == city, f"Ожидаемый город: {city}, Фактический: {origin_input.get_attribute('value')}"
+        element_destination.clear()
+        element_destination.send_keys(destination)
 
-    @allure.step("Ввести город назначения: {city}")
-    def enter_destination_city(self, city):
-        destination_input = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@data-test-id="destination-input"]'))
-        )
-        destination_input.send_keys(city, Keys.RETURN)
-        sleep(2)
-        self._take_screenshot(f"Введен город назначения: {city}")
-        assert destination_input.get_attribute("value") == city, f"Ожидаемый город: {city}, Фактический: {destination_input.get_attribute('value')}"
+    def open_calendar(self) -> None:
+        """Открытие календаря"""
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(self.DEPARTURE_CALENDAR_ICON)
+        ).click()
 
-    @allure.step("Выбрать дату отправления: {date}")
-    def select_departure_date(self, date):
-        departure_date_input = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@data-test-id='start-date-field']"))
-        )
-        departure_date_input.send_keys(Keys.RETURN)
-        sleep(5)
-        self._take_screenshot("Открыт календарь выбора даты")
+    def choose_date(self, date: str) -> None:
+        """Выбор даты"""
+        date_selector = (self.DATE_SELECTOR[0], self.DATE_SELECTOR[1].format(date))
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(date_selector)
+        ).click()
 
-        departure_month_input = self.browser.find_element(By.XPATH, "//select[@data-test-id='select-month']")
-        departure_month_input.click()
-        sleep(2)
-        self._take_screenshot("Открыт выбор месяца")
+    def choose_passengers_quantity(self, quantity: int = 1) -> None:
+        """Выбор количества пассажиров"""
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(self.PASSENGERS_FIELD)
+        ).click()
+        for _ in range(quantity):
+            WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(self.INCREASE_BUTTON)
+            ).click()
 
-        month_option = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, f"//option[@value='{date.year}-{date.month}']"))
-        )
-        month_option.click()
-        sleep(2)
-        self._take_screenshot(f"Выбран месяц: {date.month}")
+    def choose_trip_class(self, trip_class: str) -> None:
+        """Выбор класса (F - первый класс, W - комфорт)"""
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(self.PASSENGERS_FIELD)
+        ).click()
+        if trip_class == "F":
+            WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(self.TRIP_CLASS_F)
+            ).click()
+        elif trip_class == "W":
+            WebDriverWait(self.driver, 10).until(
+                EC.element_to_be_clickable(self.TRIP_CLASS_W)
+            ).click()
+        else:
+            raise ValueError("Неверный класс. Допустимые значения: 'F' или 'W'.")
 
-        day_option = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, f"//div[@data-test-id='date-0{date.day}.{date.month}.{date.year}']"))
-        )
-        day_option.click()
-        self._take_screenshot(f"Выбрана дата: {date.day}.{date.month}.{date.year}")
+    def click_search(self) -> None:
+        """Нажать кнопку Найти"""
+        WebDriverWait(self.driver, 10).until(
+            EC.element_to_be_clickable(self.FORM_SUBMIT)
+        ).click()
 
-    @allure.step("Нажать на кнопку 'Обратный билет не нужен'")
-    def click_no_return_needed(self):
-        no_return_button = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, "//button[@data-test-id='calendar-action-button']"))
-        )
-        no_return_button.click()
-        self._take_screenshot("Нажата кнопка 'Обратный билет не нужен'")
+    def get_origin_value(self) -> str:
+        """Получение значения поля Откуда"""
+        return WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.ORIGIN_INPUT)
+        ).get_attribute("value")
 
-    @allure.step("Начать поиск билетов")
-    def search_for_tickets(self):
-        submit_button = WebDriverWait(self.browser, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//button[@data-test-id="form-submit"]'))
-        )
-        submit_button.click()
+    def get_destination_value(self) -> str:
+        """Получение значения поля Куда"""
+        return WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.DESTINATION_INPUT)
+        ).get_attribute("value")
 
-        self._take_screenshot("Начало поиска билетов")
-        # Проверка, что поиск начался (например, появление лоадера или результатов)
-        WebDriverWait(self.browser, 10).until(
-            EC.visibility_of_element_located((By.XPATH, "//div[@data-test-id='search-results']"))
-        )
-        self._take_screenshot("Результаты поиска отображены")
+    def get_passengers_quantity(self) -> str:
+        """Получение количества пассажиров"""
+        return WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.PASSENGERS_QUANTITY)
+        ).text
+
+    def get_trip_class(self) -> str:
+        """Получение класса"""
+        return WebDriverWait(self.driver, 10).until(
+            EC.presence_of_element_located(self.TRIP_CLASS)
+        ).text
