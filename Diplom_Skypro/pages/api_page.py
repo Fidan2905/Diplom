@@ -1,6 +1,6 @@
 import requests
 import allure
-from settings import base_url, token, airline_code, currency, depart_date, return_date, destination, origin
+from settings import *
 
 
 @allure.epic("Авиасейлс - поиск дешевых билетов")
@@ -17,7 +17,7 @@ class AviasalesAPI:
         self.base_url = base_url
         self.token = token
         self.headers = {'X-Access-Token': token}
-        self.session = requests.Session()
+        #self.session = requests.Session()
 
 
     @allure.step("Поиск самых дешевых авиабилетов из {origin} в {destination} на дату {depart_date}")
@@ -31,21 +31,21 @@ class AviasalesAPI:
             "return_date": return_date,
             "currency": currency
         }
-        path = self.base_url + "/v3/prices/cheap"
-        response = self.session.get(path, headers=self.headers, params=params)
+        path = self.base_url + "prices_for_dates"
+        response = requests.get(path, headers=self.headers, params=params)
         return response.json()
 
 
     @allure.step("Получение цен на авиабилеты за месяц из {origin} в {destination}")
-    def get_monthly_prices(self, origin: str, destination: str, currency: str = "RUB"):
+    def get_monthly_prices(self, origin: str, destination: str, currency: str = "AZN"):
         """Получает цены на авиабилеты за месяц."""
         params = {
             "origin": origin,
             "destination": destination,
             "currency": currency
         }
-        path = self.base_url + "/v3/prices/monthly"
-        response = self.session.get(path, headers=self.headers, params=params)
+        path = base_url_2 + "prices/month-matrix"
+        response = requests.get(path, headers=self.headers, params=params)
         return response.json()
 
 
@@ -58,7 +58,7 @@ class AviasalesAPI:
             "depart_date": depart_date,
             "return_date": return_date,
         }
-        path = self.base_url + "/prices/direct"
+        path = base_url_3 + "city-directions"
         response = requests.get(path, headers=self.headers, params=params)
         return response
 
@@ -68,9 +68,10 @@ class AviasalesAPI:
         """Ищет билеты на каждый день указанного месяца."""
         params = {
             "origin": origin,
-            "currency": currency
+            "currency": currency,
+            "airline_code": "J2"
         }
-        path = self.base_url + "/city-directions"
+        path = base_url_3 + "airline-directions"
         response = requests.get(path, headers=self.headers, params=params)
         return response
 
@@ -82,18 +83,18 @@ class AviasalesAPI:
             "airline_code": airline_code,
             "limit": limit
         }
-        path = self.base_url + "/airline-directions"
+        path = base_url_3 + "/airline-directions"
         response = requests.get(path, headers=self.headers, params=params)
         return response
 
 
     @allure.step("Поиск билетов в популярные направления из {origin}")
-    def get_popular_destinations(self, origin: str, currency: str = "RUB"):
+    def get_popular_destinations(self, origin: str, currency: str = "AZN"):
         """Ищет билеты в популярные направления из указанного города."""
         params = {
             "origin": origin,
             "currency": currency
         }
-        path = self.base_url + "/v3/popular-destinations"
-        response = self.session.get(path, headers=self.headers, params=params)
+        path = base_url_3 + "city-directions"
+        response = requests.get(path, headers=self.headers, params=params)
         return response.json()
