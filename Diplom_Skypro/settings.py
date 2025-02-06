@@ -11,15 +11,3 @@ destination="IST"
 limit="10"
 origin="GYD"
 page="1"
-
-
-### Данные для UI
-base_url_ui="https://www.aviasales.ru/"
-base_url_pa="https://www.aviasales.az/my/documents?market=az"
-departure_city="Баку"
-destination_city="Стамбул"
-departure_date="2025-04-08"
-first_name=""
-last_name=""
-date_bd=""
-document_number=""
